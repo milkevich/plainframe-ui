@@ -1,4 +1,4 @@
-<p align="center">
+<p align="start">
   <img src="./pfui-logo.png" width="160" alt="Plainframe UI" />
 </p>
 
