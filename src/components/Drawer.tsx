@@ -22,7 +22,9 @@ type DrawerCtxT = {
   lockScroll: boolean;
   closeOnEscape: boolean;
 };
+
 const DrawerCtx = React.createContext<DrawerCtxT | null>(null);
+
 const useDrawerCtx = (): DrawerCtxT => {
   const ctx = useContext(DrawerCtx);
   if (!ctx) throw new Error("Drawer components must be used within <Drawer>.");
@@ -176,38 +178,6 @@ export type DrawerContentProps = Omit<
   className?: string;
 };
 
-export type DrawerLegacyProps = Omit<
-  React.HTMLAttributes<HTMLDivElement>,
-  DomDragKeys | DomAnimKeys | "style"
-> & {
-  open?: boolean;
-  /** @deprecated Use `open` instead */
-  on?: boolean;
-  defaultOpen?: boolean;
-  /** @deprecated Use `defaultOpen` instead */
-  defaultOn?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  onClose?: () => void;
-  children: React.ReactNode;
-  width?: number | string;
-  height?: number | string;
-  position?: DrawerSide;
-  variant?: DrawerVariant;
-  margin?: number | string;
-  radius?: number | string;
-  backdropBlur?: boolean;
-  backdropBlurDepth?: number | string;
-  closeOnClickAway?: boolean;
-  lockScroll?: boolean;
-  closeOnEscape?: boolean;
-  transitionMs?: number;
-  snapClosePct?: number;
-  velocityClosePxS?: number;
-  dragElasticOut?: number;
-  css?: Interpolation<Theme>;
-  className?: string;
-};
-
 let __locks = 0;
 let __prevOverflow = "";
 let __prevPadRight = "";
@@ -270,11 +240,39 @@ export const DrawerContent: React.ForwardRefExoticComponent<
   const theme = usePlainframeUITheme();
   const { open, setOpen, lockScroll, closeOnEscape } = useDrawerCtx();
 
+  const bodyLockedRef = useRef(false);
+  const pendingUnlockRef = useRef(false);
+
   useEffect(() => {
-    if (!lockScroll || !open) return;
-    lockBody();
-    return () => unlockBody();
+    if (!lockScroll) {
+      if (bodyLockedRef.current) {
+        bodyLockedRef.current = false;
+        pendingUnlockRef.current = false;
+        unlockBody();
+      }
+      return;
+    }
+
+    if (open) {
+      pendingUnlockRef.current = false;
+      if (!bodyLockedRef.current) {
+        lockBody();
+        bodyLockedRef.current = true;
+      }
+    } else {
+      if (bodyLockedRef.current) pendingUnlockRef.current = true;
+    }
   }, [open, lockScroll]);
+
+  useEffect(() => {
+    return () => {
+      if (bodyLockedRef.current) {
+        bodyLockedRef.current = false;
+        pendingUnlockRef.current = false;
+        unlockBody();
+      }
+    };
+  }, []);
 
   const marginPx = useMemo(() => toNum(margin, 0), [margin]);
 
@@ -411,9 +409,14 @@ export const DrawerContent: React.ForwardRefExoticComponent<
         inset: 0,
         zIndex: 1099,
         background: theme.surface.overlayBg,
-        transition: "all .3s ease",
+        willChange: "opacity",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
         ...(backdropBlur
-          ? { backdropFilter: `blur(${backdropBlurDepth ?? "2px"})` }
+          ? {
+              backdropFilter: `blur(${backdropBlurDepth ?? "2px"})`,
+              WebkitBackdropFilter: `blur(${backdropBlurDepth ?? "2px"})`,
+            }
           : null),
       }),
     [backdropBlur, backdropBlurDepth, theme.surface]
@@ -506,7 +509,7 @@ export const DrawerContent: React.ForwardRefExoticComponent<
 
     document.addEventListener("focusin", handleFocus, true);
     window.addEventListener("keydown", onKey);
-    
+
     return () => {
       clearTimeout(timer);
       document.removeEventListener("focusin", handleFocus, true);
@@ -517,10 +520,19 @@ export const DrawerContent: React.ForwardRefExoticComponent<
       }
     };
   }, [open, setOpen, closeOnEscape]);
+
   const { ...safeRest } = rest;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        if (lockScroll && pendingUnlockRef.current && bodyLockedRef.current) {
+          pendingUnlockRef.current = false;
+          bodyLockedRef.current = false;
+          unlockBody();
+        }
+      }}
+    >
       {open ? (
         <>
           <motion.div
@@ -569,45 +581,3 @@ export const DrawerContent: React.ForwardRefExoticComponent<
 });
 
 DrawerContent.displayName = "DrawerContent";
-
-export const DrawerLegacy: React.ForwardRefExoticComponent<
-  DrawerLegacyProps & React.RefAttributes<HTMLDivElement>
-> = forwardRef<HTMLDivElement, DrawerLegacyProps>(function DrawerLegacy(
-  {
-    open: openProp,
-    on: onProp,
-    defaultOpen: defaultOpenProp,
-    defaultOn: defaultOnProp,
-    onOpenChange,
-    onClose,
-    children,
-    ...contentProps
-  },
-  ref
-) {
-  const controlledValue = openProp !== undefined ? openProp : onProp;
-  const defaultValue = defaultOpenProp !== undefined ? defaultOpenProp : defaultOnProp;
-  
-  const isControlled = controlledValue !== undefined;
-  const [internalOpen, setInternalOpen] = useState<boolean>(!!defaultValue);
-  const open = isControlled ? !!controlledValue : internalOpen;
-
-  const handleOpenChange = useCallback(
-    (v: boolean) => {
-      if (!isControlled) setInternalOpen(v);
-      if (!v) onClose?.();
-      onOpenChange?.(v);
-    },
-    [isControlled, onClose, onOpenChange]
-  );
-
-  return (
-    <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent ref={ref} {...contentProps}>
-        {children}
-      </DrawerContent>
-    </Drawer>
-  );
-});
-
-DrawerLegacy.displayName = "DrawerLegacy";

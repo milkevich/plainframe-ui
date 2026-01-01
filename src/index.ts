@@ -19,7 +19,7 @@ export { CodeField } from "./components/CodeField";
 export { Container } from "./components/Container";
 export { ContextZone } from "./components/ContextZone";
 export { Divider } from "./components/Divider";
-export { Drawer, DrawerTrigger, DrawerContent, DrawerLegacy } from "./components/Drawer";
+export { Drawer, DrawerTrigger, DrawerContent } from "./components/Drawer";
 export { DropdownMenu, DropdownMenuContent, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, useDropdownMenuActiveIndex } from "./components/DropdownMenu";
 export { Fade } from "./components/Fade";
 export { Flex } from "./components/Flex";
