@@ -1,4 +1,9 @@
-# plainframe-ui
+<p align="center">
+  <img src="../plainframe-ui/pfui-logo.png" width="160" alt="Plainframe UI" />
+</p>
+
+
+# Plainframe UI
 
 Token-driven React UI components with built-in theming, color modes, and accessible primitives.
 
