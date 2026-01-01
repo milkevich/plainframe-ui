@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../plainframe-ui/pfui-logo.png" width="160" alt="Plainframe UI" />
+  <img src="./pfui-logo.png" width="160" alt="Plainframe UI" />
 </p>
 
 
